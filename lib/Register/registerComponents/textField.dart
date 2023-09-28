@@ -15,7 +15,6 @@ class textField extends StatelessWidget {
           controller: controller,
           style: TextStyle(height: 1.5),
           decoration: InputDecoration(
-              prefixIcon: Icon(icon),
               filled: false,
               enabledBorder: OutlineInputBorder(
                   borderSide: BorderSide(color: Color(0xff3e003e))),

@@ -1,18 +1,15 @@
-import 'dart:ffi';
-
-import 'package:algolia/algolia.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_application_1/Components/Sharing.dart';
 import 'package:flutter_application_1/Components/projectTitle.dart';
-import 'package:flutter_application_1/Database/algolia.dart';
 import 'package:flutter_application_1/Models/PostModel.dart';
 import 'package:flutter_application_1/Models/UserModel.dart';
+import 'package:flutter_application_1/Provider/UserProvider.dart';
+import 'package:flutter_application_1/Resources/auth_methods.dart';
 import 'package:flutter_application_1/Theme/Theme.dart';
-import 'package:flutter_chat_ui/flutter_chat_ui.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_application_1/Usage/Notifications.dart';
+import 'package:provider/provider.dart';
 
 class home extends StatefulWidget {
   @override
@@ -21,32 +18,26 @@ class home extends StatefulWidget {
 
 class _homeState extends State<home> {
   List<PostModel>? _posts;
-  bool isLoading = true;
+  UserModel? user;
+  bool isNot = false;
   void initState() {
     super.initState();
-    getPosts();
+    getUser();
   }
 
-  void changeLoading() {
-    setState(() {
-      isLoading = !isLoading;
-    });
-  }
-
-  Future<void> getPosts() async {
-    changeLoading();
-    final algolia = AlgoliaInit().algolia;
-    AlgoliaQuery query = algolia.instance.index("ShareIT_posts");
-    AlgoliaQuerySnapshot querySnapshot = await query.getObjects();
-    List<AlgoliaObjectSnapshot> response = querySnapshot.hits;
-    final _fetchedDatas = response.map((doc) => doc.data).toList();
-
-    if (_fetchedDatas is List) {
+  getUser() async {
+    user = await AuthMethods().getUserDetails();
+    if (user!.notification!) {
       setState(() {
-        _posts = _fetchedDatas.map((e) => PostModel.fromJson(e)).toList();
+        isNot = true;
       });
     }
-    changeLoading();
+  }
+
+  changeNot() {
+    setState(() {
+      isNot = false;
+    });
   }
 
   @override
@@ -66,9 +57,35 @@ class _homeState extends State<home> {
                           BorderRadius.vertical(bottom: Radius.circular(15)),
                       side: BorderSide(color: Color(0xff3e003e))),
                   actions: [
-                    getIconButton(
-                      selectedIcon: Icons.notifications_none_rounded,
-                      selectedSize: 30,
+                    Stack(
+                      children: [
+                        IconButton(
+                          icon: Icon(Icons.notifications_none_rounded),
+                          iconSize: 30,
+                          onPressed: () async {
+                            String refresh = await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) => NotificationsView()));
+                            if (refresh == "refresh") {
+                              changeNot();
+                            }
+                          },
+                        ),
+                        isNot
+                            ? Positioned(
+                                left: 30,
+                                top: 10,
+                                child: Container(
+                                  constraints:
+                                      BoxConstraints(maxHeight: 8, maxWidth: 8),
+                                  decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(5),
+                                      color: const Color.fromARGB(
+                                          255, 138, 28, 20)),
+                                ))
+                            : SizedBox()
+                      ],
                     ),
                     getIconButton(
                       selectedIcon: Icons.message_outlined,
@@ -82,16 +99,40 @@ class _homeState extends State<home> {
             body: Column(mainAxisSize: MainAxisSize.min, children: [
               Expanded(
                   flex: 9,
-                  child: isLoading
-                      ? ListView.builder(
+                  child: StreamBuilder(
+                      stream: FirebaseFirestore.instance
+                          .collection("posts")
+                          .orderBy("created_at", descending: true)
+                          .snapshots(),
+                      builder: (context,
+                          AsyncSnapshot<QuerySnapshot<Map<String, dynamic>>>
+                              posts) {
+                        if (posts.connectionState == ConnectionState.waiting) {
+                          return LinearProgressIndicator();
+                        }
+                        return ListView.builder(
                           padding: EdgeInsets.zero,
                           itemBuilder: (context, index) {
-                            return PostView(post: _posts?[index]);
+                            var _fetchedPosts = posts.data?.docs
+                                .map((doc) => doc.data())
+                                .toList();
+                            if (_fetchedPosts != null) {
+                              _posts = _fetchedPosts
+                                  .map(
+                                    (element) => PostModel.fromJson(element),
+                                  )
+                                  .toList();
+                            }
+                            return Column(
+                              children: [
+                                PostView(post: _posts?[index]),
+                                Divider(),
+                              ],
+                            );
                           },
-                          itemCount: _posts?.length ?? 0,
-                        )
-                      : LinearProgressIndicator()),
-              Expanded(flex: 1, child: Footer())
+                          itemCount: posts.data?.docs.length ?? 0,
+                        );
+                      }))
             ])));
   }
 }

@@ -1,15 +1,41 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/Models/PostModel.dart';
+import 'package:flutter_application_1/Resources/firestore_methods.dart';
 import 'package:flutter_application_1/Theme/Theme.dart';
+import 'package:flutter_application_1/layout/layout.dart';
 
 class ImageView extends StatefulWidget {
-  const ImageView({super.key});
+  ImageView({super.key, required this.post});
+
+  PostModel? post;
 
   @override
   State<ImageView> createState() => _ImageViewState();
 }
 
 class _ImageViewState extends State<ImageView> {
-  int _sharedImageLength = 3;
+  TextEditingController _textController = TextEditingController();
+
+  String response = "";
+  String returned = "";
+
+  void postComment() async {
+    response = await FireStoreMethods().postComment(widget.post!.post_Id!,
+        _textController.text, FirebaseAuth.instance.currentUser!.uid);
+
+    if (response == "success") {
+      setState(() {
+        _textController.text = "";
+        returned = "Yorumunuz başarıyla kaydedildi";
+      });
+    } else {
+      setState(() {
+        returned = " Bir hata oluştu";
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -30,14 +56,15 @@ class _ImageViewState extends State<ImageView> {
               flex: 6,
               child: PageView.builder(
                 scrollDirection: Axis.horizontal,
-                itemCount: _sharedImageLength,
+                itemCount: widget.post?.media?.imageUrl?.length,
                 itemBuilder: (context, index) {
-                  return UserImage(context);
+                  return UserImage(
+                      context, widget.post?.media?.imageUrl?[index]);
                 },
               )),
           Expanded(
             flex: 2,
-            child: ImageButton(),
+            child: ImageButton(post: widget.post!),
           )
         ],
       ),
@@ -47,28 +74,39 @@ class _ImageViewState extends State<ImageView> {
   Container _doComment() {
     return Container(
       alignment: Alignment.bottomCenter,
-      child: Row(
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: const TextField(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: Column(
+          children: [
+            Text(
+              returned,
               style: TextStyle(color: Colors.white),
-              cursorColor: Colors.white,
-              decoration: InputDecoration(
-                  hintText: "Yorum yap",
-                  hintStyle: TextStyle(color: Colors.white),
-                  fillColor: Colors.black26,
-                  filled: true,
-                  constraints: BoxConstraints(maxWidth: 323, maxHeight: 30)),
             ),
-          ),
-          IconButton(
-              onPressed: () {},
-              icon: Icon(
-                Icons.send_outlined,
-                color: ProjectTheme().theme.iconTheme.color,
-              ))
-        ],
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                TextField(
+                  controller: _textController,
+                  style: TextStyle(color: Colors.white),
+                  cursorColor: Colors.white,
+                  decoration: const InputDecoration(
+                      hintText: "Yorum yap",
+                      hintStyle: TextStyle(color: Colors.white),
+                      fillColor: Colors.black26,
+                      filled: true,
+                      constraints:
+                          BoxConstraints(maxWidth: 323, maxHeight: 30)),
+                ),
+                IconButton(
+                    onPressed: postComment,
+                    icon: Icon(
+                      Icons.send_outlined,
+                      color: ProjectTheme().theme.iconTheme.color,
+                    ))
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -90,18 +128,28 @@ class _ImageViewState extends State<ImageView> {
     );
   }
 
-  UserImage(context) {
+  UserImage(context, imageUrl) {
     return Container(
         width: MediaQuery.of(context).size.width,
         child: Image.network(
-            "https://cdn.gencraft.com/prod/user/cc51920e-de95-4192-b94a-d7112f255dff/8e0d7bfb-9544-4b12-9886-421edd977103/images/image1_0.jpg?Expires=1702284945&Signature=bMhdQWE3QijsodoO9DahLCXyZtgk7XhquvM4cKbhD9Ps~byHXiBujhPONNuq4MmZPloDGnqqsh8kkDFnJGSXk5Hlq4cjRC058~E-m9TPWCEg8~~0-G6iyzsM7-lbuEbReSqnGxGc9n2zqwXKS9PQ~qSH9Mmfqc9AqBLtJ-l9t23fXay9A5gEAcanvO3ZLsRS~5j2M53UabpRXE5HrNaWiiOc3PUl3nzWvh-IBwK-I51jXrHoDFqgV3EVuXBn9MRhxLlioHtDLNg-ItY0NvVJdFw6q6PlAR8a4I~9Pa9URD5Uhxj4Sa89TbWmftHq~IaxygIpbowEl3wrvBlMo8dDhw__&Key-Pair-Id=K3RDDB1TZ8BHT8"));
+          imageUrl,
+          errorBuilder: (context, error, stackTrace) => Center(
+            child: Text(
+              "Resim bulunamadı",
+              style: TextStyle(color: Colors.white, fontSize: 17),
+            ),
+          ),
+        ));
   }
 }
 
 class ImageButton extends StatefulWidget {
-  const ImageButton({
+  ImageButton({
     super.key,
+    required this.post,
   });
+
+  PostModel post;
 
   @override
   State<ImageButton> createState() => _ImageButtonState();
@@ -109,7 +157,14 @@ class ImageButton extends StatefulWidget {
 
 class _ImageButtonState extends State<ImageButton> {
   bool _isLiked = false;
-  bool _isShared = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _isLiked =
+        widget.post.like?.contains(FirebaseAuth.instance.currentUser?.uid) ??
+            false;
+  }
 
   void changeLike() {
     setState(() {
@@ -117,20 +172,21 @@ class _ImageButtonState extends State<ImageButton> {
     });
   }
 
-  void changeShare() {
-    setState(() {
-      _isShared = !_isShared;
-    });
+  Future<void> postLike() async {
+    await FireStoreMethods().likePost(widget.post.post_Id!,
+        FirebaseAuth.instance.currentUser!.uid, widget.post.like!);
+    changeLike();
   }
 
   @override
   Widget build(BuildContext context) {
     return Container(
       alignment: Alignment.bottomLeft,
+      padding: EdgeInsets.symmetric(horizontal: 10),
       child: Row(
         children: [
           IconButton(
-              onPressed: changeLike,
+              onPressed: postLike,
               icon: Icon(
                 _isLiked
                     ? Icons.favorite_rounded
@@ -138,9 +194,16 @@ class _ImageButtonState extends State<ImageButton> {
                 color: Colors.white,
               )),
           IconButton(
-              onPressed: changeShare,
+              onPressed: () {
+                Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          layout(page: 2, sharedPost: widget.post),
+                    ));
+              },
               icon: Icon(
-                _isShared ? Icons.done : Icons.share_outlined,
+                Icons.share_outlined,
                 color: Colors.white,
               ))
         ],

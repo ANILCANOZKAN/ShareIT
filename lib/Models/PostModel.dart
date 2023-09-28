@@ -1,13 +1,11 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:intl/intl.dart';
-
 class PostModel {
   String? userId;
-  int? like;
+  List? like;
   Media? media;
   String? body;
   String? post_Id;
   int? created_at;
+  String? sharedPost;
 
   PostModel(
       {this.userId,
@@ -15,7 +13,8 @@ class PostModel {
       this.media,
       this.body,
       this.post_Id,
-      this.created_at});
+      this.created_at,
+      this.sharedPost});
 
   PostModel.fromJson(Map<String, dynamic> json) {
     userId = json['user_Id'];
@@ -23,11 +22,8 @@ class PostModel {
     media = json['media'] != null ? new Media.fromJson(json['media']) : null;
     body = json['body'];
     post_Id = json['post_Id'];
-    if (json['created_at'] is Timestamp) {
-      created_at = json['created_at'].millisecondsSinceEpoch;
-    } else {
-      created_at = json['created_at'];
-    }
+    created_at = json['created_at'];
+    sharedPost = json['sharedPost'];
   }
 
   Map<String, dynamic> toJson() {
@@ -40,6 +36,7 @@ class PostModel {
     data['body'] = this.body;
     data['post_Id'] = this.post_Id;
     data['created_at'] = this.created_at;
+    data['sharedPost'] = this.sharedPost;
     return data;
   }
 }

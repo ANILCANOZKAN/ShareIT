@@ -6,6 +6,13 @@ class ProjectTheme {
   late ThemeData theme;
   ProjectTheme() {
     theme = ThemeData(
+      //bottomnavigator
+      bottomNavigationBarTheme: BottomNavigationBarThemeData(
+          type: BottomNavigationBarType.fixed,
+          unselectedItemColor: _themeColors.mainColorLessOpacity,
+          selectedItemColor: _themeColors.mainColor,
+          backgroundColor: Colors.white),
+
       //input
       inputDecorationTheme: InputDecorationTheme(
         enabledBorder: const OutlineInputBorder(
@@ -34,6 +41,9 @@ class ProjectTheme {
       dividerColor: _themeColors.mainColor,
       navigationBarTheme: NavigationBarThemeData(),
 
+      //card
+      cardColor: Colors.white.withOpacity(0.96),
+
       //icon
       iconTheme: IconThemeData(color: _themeColors.lightColor),
 
@@ -41,9 +51,12 @@ class ProjectTheme {
 
       //text
       textTheme: TextTheme(),
+      primaryTextTheme: TextTheme(),
 
       //button
-      iconButtonTheme: IconButtonThemeData(style: ButtonStyle()),
+      iconButtonTheme: IconButtonThemeData(
+          style: ButtonStyle(
+              iconColor: MaterialStatePropertyAll(_themeColors.mainColor))),
 
       textButtonTheme: TextButtonThemeData(style: ButtonStyle()),
 
@@ -62,5 +75,6 @@ class ProjectTheme {
 
 class _ThemeColors {
   final Color mainColor = Color.fromARGB(255, 64, 0, 64);
+  final Color mainColorLessOpacity = Color.fromARGB(137, 64, 0, 64);
   final Color lightColor = Colors.white.withOpacity(0.982);
 }

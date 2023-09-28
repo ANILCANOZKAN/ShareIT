@@ -9,17 +9,20 @@ class UserModel {
   String? bio;
   String? email;
   String? username;
+  Notifications? notifications;
+  bool? notification;
 
-  UserModel({
-    this.photo,
-    this.followers,
-    this.following,
-    this.name,
-    this.bio,
-    this.userId,
-    this.email,
-    this.username,
-  });
+  UserModel(
+      {this.photo,
+      this.followers,
+      this.following,
+      this.name,
+      this.bio,
+      this.userId,
+      this.email,
+      this.username,
+      this.notifications,
+      this.notification});
 
   static UserModel fromSnap(DocumentSnapshot snap) {
     var snapshot = snap.data() as Map<String, dynamic>;
@@ -44,6 +47,10 @@ class UserModel {
     email = json['email'];
     username = json['username'];
     userId = json['userId'];
+    notifications = json['notifications'] != null
+        ? new Notifications.fromJson(json['notifications'])
+        : null;
+    notification = json['notification'];
   }
 
   Map<String, dynamic> toJson() {
@@ -56,6 +63,29 @@ class UserModel {
     data['email'] = this.email;
     data['username'] = this.username;
     data['userId'] = this.userId;
+    if (this.notifications != null) {
+      data['notifications'] = this.notifications!.toJson();
+    }
+    data['notification'] = this.notification;
+    return data;
+  }
+}
+
+class Notifications {
+  List<dynamic>? follow;
+  List<dynamic>? comment;
+
+  Notifications({this.follow, this.comment});
+
+  Notifications.fromJson(Map<String, dynamic> json) {
+    follow = json['follow'];
+    comment = json['comment'];
+  }
+
+  Map<String, dynamic> toJson() {
+    final Map<String, dynamic> data = new Map<String, dynamic>();
+    data['comment'] = this.comment;
+    data['follow'] = this.follow;
     return data;
   }
 }

@@ -3,7 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_application_1/Components/Sharing.dart';
 import 'package:flutter_application_1/Components/projectTitle.dart';
 import 'package:flutter_application_1/Models/PostModel.dart';
+import 'package:flutter_application_1/Models/UserModel.dart';
+import 'package:flutter_application_1/Resources/auth_methods.dart';
 import 'package:flutter_application_1/Theme/Theme.dart';
+import 'package:flutter_application_1/Usage/Notifications.dart';
 import 'package:flutter_application_1/Usage/Search.dart';
 
 class trendsView extends StatefulWidget {
@@ -16,17 +19,53 @@ class _trendsViewState extends State<trendsView> {
   int index = 0;
   bool isLoading = true;
   DateTime today = DateTime.now();
+  int timeQuery = DateTime(2022, 8, 30, 00, 00).millisecondsSinceEpoch;
+  bool isNot = false;
+
+  UserModel? user;
+
+  getUser() async {
+    user = await AuthMethods().getUserDetails();
+    if (user!.notification!) {
+      setState(() {
+        isNot = true;
+      });
+    }
+  }
+
+  changeNot() {
+    setState(() {
+      isNot = false;
+    });
+  }
 
   void changeIndex(value) {
     setState(() {
       index = value;
     });
-    getPosts(index);
+
+    if (index == 1) {
+      //bu ay
+      setState(() {
+        timeQuery =
+            today.subtract(new Duration(days: 30)).millisecondsSinceEpoch;
+      });
+    } else if (index == 2) {
+      //bu hafta
+      setState(() {
+        timeQuery =
+            today.subtract(new Duration(days: 7)).millisecondsSinceEpoch;
+      });
+    } else {
+      setState(() {
+        timeQuery = DateTime(2022, 8, 30, 00, 00).millisecondsSinceEpoch;
+      });
+    }
   }
 
   void initState() {
     super.initState();
-    getPosts(index);
+    getUser();
   }
 
   void changeLoading() {
@@ -35,32 +74,7 @@ class _trendsViewState extends State<trendsView> {
     });
   }
 
-  getPosts(tabIndex) async {
-    changeLoading();
-    DateTime timeQuery = DateTime(2022, 8, 30, 00, 00);
-    if (tabIndex == 1) {
-      //bu ay
-      timeQuery = today.subtract(new Duration(days: 30));
-    } else if (tabIndex == 2) {
-      //bu hafta
-      timeQuery = today.subtract(new Duration(days: 7));
-    }
-    var db = FirebaseFirestore.instance;
-    QuerySnapshot querySnapshot = await db
-        .collection("posts")
-        .where("created_at", isGreaterThanOrEqualTo: timeQuery)
-        .limit(100)
-        .get();
-    final _fetchedDatas = querySnapshot.docs.map((doc) => doc.data()).toList();
-
-    if (_fetchedDatas is List) {
-      setState(() {
-        _posts = _fetchedDatas.map((e) => PostModel.fromJson(e)).toList();
-        _posts?.sort((a, b) => b.like!.compareTo(a.like!.toInt()));
-      });
-    }
-    changeLoading();
-  }
+  getPosts(tabIndex) async {}
 
   @override
   Widget build(BuildContext context) {
@@ -78,9 +92,36 @@ class _trendsViewState extends State<trendsView> {
                     automaticallyImplyLeading: false,
                     title: projectTitle().appBarTitle(_title),
                     actions: [
-                      getIconButton(
-                        selectedIcon: Icons.notifications_none_rounded,
-                        selectedSize: 30,
+                      Stack(
+                        children: [
+                          IconButton(
+                            icon: Icon(Icons.notifications_none_rounded),
+                            iconSize: 30,
+                            onPressed: () async {
+                              String refresh = await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (context) =>
+                                          NotificationsView()));
+                              if (refresh == "refresh") {
+                                changeNot();
+                              }
+                            },
+                          ),
+                          isNot
+                              ? Positioned(
+                                  left: 30,
+                                  top: 10,
+                                  child: Container(
+                                    constraints: BoxConstraints(
+                                        maxHeight: 8, maxWidth: 8),
+                                    decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(5),
+                                        color: const Color.fromARGB(
+                                            255, 138, 28, 20)),
+                                  ))
+                              : SizedBox()
+                        ],
                       ),
                       getIconButton(
                         selectedIcon: Icons.message_outlined,
@@ -98,7 +139,7 @@ class _trendsViewState extends State<trendsView> {
                         changeIndex(value);
                       },
                       tabs: const [
-                        tabBarContainer(text: "Tüm Zamanlar"),
+                        tabBarContainer(text: "Tüm zamanlar"),
                         tabBarContainer(text: "Bu ay"),
                         tabBarContainer(text: "Bu hafta")
                       ]),
@@ -108,16 +149,40 @@ class _trendsViewState extends State<trendsView> {
                       Expanded(
                         flex: 9,
                         child: TabBarView(children: [
-                          trendsTabViews(isLoading: isLoading, posts: _posts),
-                          trendsTabViews(isLoading: isLoading, posts: _posts),
-                          trendsTabViews(isLoading: isLoading, posts: _posts),
+                          trendPosts(),
+                          trendPosts(),
+                          trendPosts()
                         ]),
                       ),
                     ]),
                   ),
-                  Expanded(flex: 1, child: Footer())
                 ],
               ))),
+    );
+  }
+
+  StreamBuilder<QuerySnapshot<Map<String, dynamic>>> trendPosts() {
+    return StreamBuilder(
+      stream: FirebaseFirestore.instance
+          .collection("posts")
+          .where("created_at", isGreaterThanOrEqualTo: timeQuery)
+          .limit(100)
+          .snapshots(),
+      builder: (context, posts) {
+        if (posts.connectionState == ConnectionState.waiting) {
+          return Center(
+            child: CircularProgressIndicator.adaptive(),
+          );
+        }
+        List _fetchedPost =
+            posts.data?.docs.map((e) => e.data()).toList() ?? [];
+        if (_fetchedPost.isNotEmpty) {
+          _posts = _fetchedPost.map((e) => PostModel.fromJson(e)).toList();
+          return trendsTabViews(isLoading: isLoading, posts: _posts);
+        } else {
+          return Text("Post bulunamadı");
+        }
+      },
     );
   }
 }
@@ -140,7 +205,9 @@ class trendsTabViews extends StatelessWidget {
               ? ListView.builder(
                   padding: EdgeInsets.zero,
                   itemBuilder: (context, index) {
-                    return PostView(post: _posts?[index]);
+                    return Column(
+                      children: [PostView(post: _posts?[index]), Divider()],
+                    );
                   },
                   itemCount: _posts?.length ?? 0,
                 )

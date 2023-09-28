@@ -14,8 +14,11 @@ class timeFormat {
     } else if (DateTime.timestamp().difference(time).inHours >= 24) {
       created = DateTime.timestamp().difference(time).inDays;
       d = "g";
-    } else {
+    } else if (DateTime.timestamp().difference(time).inHours >= 1) {
       created = DateTime.timestamp().difference(time).inHours;
+    } else {
+      d = "d";
+      created = DateTime.timestamp().difference(time).inMinutes;
     }
     List response = List.empty(growable: true);
     response.add(d);

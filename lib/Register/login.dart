@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_application_1/Register/registerComponents/textField.dart';
 import 'package:flutter_application_1/Resources/auth_methods.dart';
-import 'package:flutter_application_1/Usage/home.dart';
+import 'package:flutter_application_1/layout/layout.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class login extends StatefulWidget {
@@ -35,10 +35,11 @@ class _loginState extends State<login> {
     changeLoading();
     response = await AuthMethods().loginUser(
         email: _emailController.text, password: _passwordController.text);
-    if (response == "success") {
+    if (response == "Giriş başarılı") {
       if (context.mounted) {
         Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (context) => home()), (route) => false);
+            MaterialPageRoute(builder: (context) => layout()),
+            (route) => false);
       }
     }
     changeLoading();
@@ -81,7 +82,7 @@ class _loginState extends State<login> {
                   style: TextStyle(color: textField().errColor()),
                 ),
                 SizedBox(
-                  height: 5,
+                  height: 10,
                 ),
                 textField(
                   str: "E-mail",
@@ -102,7 +103,9 @@ class _loginState extends State<login> {
                           borderRadius: BorderRadius.circular(20)))),
                   child: _isLoading
                       ? Text("Giriş yap")
-                      : CircularProgressIndicator.adaptive(),
+                      : CircularProgressIndicator(
+                          color: Colors.white,
+                        ),
                 ),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,

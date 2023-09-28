@@ -1,21 +1,19 @@
-import 'dart:ui';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/Components/projectTitle.dart';
 import 'package:flutter_application_1/Models/UserModel.dart';
 import 'package:flutter_application_1/Usage/Message.dart';
-import 'package:flutter_application_1/Usage/following.dart';
+import 'package:flutter_application_1/View/searchedUsers.dart';
 
-class DM extends StatefulWidget {
-  const DM({super.key});
+class followersView extends StatefulWidget {
+  const followersView({super.key});
 
   @override
-  State<DM> createState() => _DMState();
+  State<followersView> createState() => _followersViewState();
 }
 
-class _DMState extends State<DM> {
+class _followersViewState extends State<followersView> {
   void initState() {
     super.initState();
     getData();
@@ -23,26 +21,21 @@ class _DMState extends State<DM> {
 
   bool isLoading = true;
 
-  List messages = [];
   List<UserModel> _users = [];
-  List<UserModel> _filteredUser = [];
-
-  TextEditingController _textController = TextEditingController();
+  List<UserModel> _filteredUsers = [];
+  UserModel user = new UserModel();
 
   getData() async {
     changeLoading();
     var dummy = await FirebaseFirestore.instance
         .collection("users")
         .doc(FirebaseAuth.instance.currentUser!.uid)
-        .collection("messages")
-        .orderBy("last_time", descending: true)
         .get();
-
-    messages = dummy.docs.map((e) => e.id).toList();
-    if (messages.isNotEmpty) {
+    user = UserModel.fromJson(dummy.data()!);
+    if (user.following?.isNotEmpty ?? false) {
       await getUsers();
+      _filteredUsers = _users;
     }
-    _filteredUser = _users;
     changeLoading();
   }
 
@@ -53,19 +46,19 @@ class _DMState extends State<DM> {
   }
 
   getUsers() async {
-    for (int i = 0; i < messages.length; i++) {
+    for (int i = 0; i < user.following!.length; i++) {
       await FirebaseFirestore.instance
           .collection("users")
-          .doc(messages[i])
+          .doc(user.following?[i])
           .get()
           .then((value) => _users.add(UserModel.fromJson(value.data()!)));
     }
   }
 
   changeText(String text) {
-    _filteredUser = _users;
+    _filteredUsers = _users;
     setState(() {
-      _filteredUser = _filteredUser
+      _filteredUsers = _filteredUsers
           .where((user) =>
               (user.username!.toLowerCase().contains(text.toLowerCase())) ||
               (user.name!.toLowerCase().contains(text.toLowerCase())))
@@ -76,40 +69,27 @@ class _DMState extends State<DM> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        resizeToAvoidBottomInset: false,
-        appBar: AppBar(
-          centerTitle: true,
-          toolbarHeight: 60,
-          title: projectTitle().appBarTitleWithSize("Mesajların", 30),
-          actions: [
-            IconButton(
-              icon: Icon(Icons.add),
-              iconSize: 30,
-              onPressed: () {
-                Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => followersView(),
-                    ));
-              },
-            ),
-          ],
-        ),
-        body: Column(children: [
-          SearchField(),
-          isLoading
-              ? Expanded(
-                  flex: 9,
-                  child: ListView.builder(
-                    itemBuilder: (context, index) {
-                      return SearchedUsers(user: _filteredUser[index]);
-                    },
-                    itemCount: _filteredUser.length,
-                  ))
-              : Center(
-                  child: CircularProgressIndicator.adaptive(),
-                )
-        ]));
+      appBar: AppBar(
+        toolbarHeight: 60,
+        centerTitle: true,
+        title: projectTitle().appBarTitleWithSize("Takip ettiklerin", 30),
+      ),
+      body: Column(children: [
+        SearchField(),
+        isLoading
+            ? Expanded(
+                child: ListView.builder(
+                  itemBuilder: (context, index) {
+                    return SearchedUsers(user: _filteredUsers[index]);
+                  },
+                  itemCount: _users.length,
+                ),
+              )
+            : Center(
+                child: CircularProgressIndicator.adaptive(),
+              )
+      ]),
+    );
   }
 
   Padding SearchField() {
@@ -119,7 +99,6 @@ class _DMState extends State<DM> {
           onChanged: (value) {
             changeText(value);
           },
-          controller: _textController,
           cursorHeight: 15,
           style: const TextStyle(height: 1),
           decoration: const InputDecoration(

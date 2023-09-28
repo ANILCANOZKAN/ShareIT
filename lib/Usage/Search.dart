@@ -1,14 +1,12 @@
-import 'package:algolia/algolia.dart';
-
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/Components/Sharing.dart';
 import 'package:flutter_application_1/Components/searchStateUsers.dart';
 import 'package:flutter_application_1/Database/algolia.dart';
 import 'package:flutter_application_1/Models/PostModel.dart';
 import 'package:flutter_application_1/Models/UserModel.dart';
+import 'package:flutter_application_1/View/SharedPostView.dart';
 
 class Search extends StatefulWidget {
-  const Search({super.key});
+  Search({super.key});
 
   @override
   State<Search> createState() => SearchState();
@@ -16,20 +14,14 @@ class Search extends StatefulWidget {
 
 class SearchState extends State<Search> {
   static const List<Tab> searchTabs = <Tab>[
-    Tab(child: tabBarContainer(text: "Kişiler ve Sayfalar")),
+    Tab(child: tabBarContainer(text: "Kişiler")),
     Tab(child: tabBarContainer(text: "Paylaşımlar")),
   ];
 
   String searchedText = "";
   int index = 0;
-  List<UserModel>? _users;
-  List<PostModel>? _posts;
   bool isLoading = true;
-
-  void initState() {
-    super.initState();
-    getData(searchedText);
-  }
+  final algolia = AlgoliaInit().algolia;
 
   void changeLoading() {
     setState(() {
@@ -37,43 +29,16 @@ class SearchState extends State<Search> {
     });
   }
 
-  Future<void> getData(String text) async {
-    changeLoading();
-    if (index == 0) {
-      final algolia = AlgoliaInit().algolia;
-      AlgoliaQuery query = algolia.instance.index("ShareIT").query(text);
-      AlgoliaQuerySnapshot querySnapshot = await query.getObjects();
-      List<AlgoliaObjectSnapshot> response = querySnapshot.hits;
-      final _fetchedDatas = response.map((doc) => doc.data).toList();
-      setState(() {
-        _users = _fetchedDatas.map((e) => UserModel.fromJson(e)).toList();
-      });
-    } else {
-      final algolia = AlgoliaInit().algolia;
-      AlgoliaQuery query = algolia.instance.index("ShareIT_posts").query(text);
-      AlgoliaQuerySnapshot querySnapshot = await query.getObjects();
-      List<AlgoliaObjectSnapshot> response = querySnapshot.hits;
-      final _fetchedDatas = response.map((doc) => doc.data).toList();
-
-      setState(() {
-        _posts = _fetchedDatas.map((e) => PostModel.fromJson(e)).toList();
-      });
-    }
-    changeLoading();
-  }
-
   void changeTabIndex(value) {
     setState(() {
       index = value;
     });
-    getData(searchedText);
   }
 
   void changeSearchText(text) {
     setState(() {
       searchedText = text;
     });
-    getData(searchedText);
   }
 
   @override
@@ -100,45 +65,10 @@ class SearchState extends State<Search> {
               Expanded(
                 flex: 9,
                 child: TabBarView(children: [
-                  Column(children: [
-                    isLoading
-                        ? Expanded(
-                            child: _users?.isEmpty ?? false
-                                ? Text(
-                                    "Kullanıcı bulunamadı",
-                                    style: TextStyle(
-                                        color: Color(0xff3e003e),
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.w300),
-                                  )
-                                : searchStateUsers(_users))
-                        : const LinearProgressIndicator()
-                  ]),
-                  Column(
-                    children: [
-                      isLoading
-                          ? Expanded(
-                              child: _posts?.isEmpty ?? false
-                                  ? Text(
-                                      "Post bulunamadı",
-                                      style: TextStyle(
-                                          color: Color(0xff3e003e),
-                                          fontSize: 20,
-                                          fontWeight: FontWeight.w300),
-                                    )
-                                  : ListView.builder(
-                                      itemBuilder: (context, index) {
-                                        return PostView(post: _posts?[index]);
-                                      },
-                                      itemCount: _posts?.length ?? 0,
-                                    ),
-                            )
-                          : const LinearProgressIndicator()
-                    ],
-                  ),
+                  searchUserWidget(text: searchedText),
+                  searchPostWidget(text: searchedText)
                 ]),
               ),
-              Expanded(flex: 1, child: Footer())
             ])));
   }
 
@@ -159,6 +89,67 @@ class SearchState extends State<Search> {
             hintText: " Ara",
           )),
     );
+  }
+}
+
+class searchPostWidget extends StatelessWidget {
+  searchPostWidget({super.key, required this.text});
+
+  String text;
+
+  final algolia = AlgoliaInit().algolia;
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder(
+        stream:
+            algolia.index("ShareIT_posts").query(text).getObjects().asStream(),
+        builder: (context, posts) {
+          if (posts.connectionState == ConnectionState.waiting) {
+            return Center(
+              child: CircularProgressIndicator.adaptive(),
+            );
+          }
+          final response = posts.data;
+          List<PostModel>? _posts =
+              response?.hits.map((e) => PostModel.fromJson(e.data)).toList();
+          return Expanded(
+            child: ListView.builder(
+              itemBuilder: (context, index) {
+                return Column(
+                  children: [
+                    SharedPostView(postId: _posts?[index].post_Id),
+                    Divider()
+                  ],
+                );
+              },
+              itemCount: _posts?.length ?? 0,
+            ),
+          );
+        });
+  }
+}
+
+class searchUserWidget extends StatelessWidget {
+  searchUserWidget({super.key, required this.text});
+  String text;
+  final algolia = AlgoliaInit().algolia;
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder(
+        stream: algolia.index("ShareIT").query(text).getObjects().asStream(),
+        builder: (context, searchedUsers) {
+          if (searchedUsers.connectionState == ConnectionState.waiting) {
+            return Center(
+              child: CircularProgressIndicator.adaptive(),
+            );
+          }
+          final response = searchedUsers.data;
+          List<UserModel>? _users =
+              response?.hits.map((e) => UserModel.fromJson(e.data)).toList();
+          return Expanded(child: searchStateUsers(_users));
+        });
   }
 }
 
