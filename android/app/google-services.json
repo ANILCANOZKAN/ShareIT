@@ -1,40 +1,40 @@
 {
   "project_info": {
-    "project_number": "197530779446",
-    "firebase_url": "https://shareit-v1-default-rtdb.europe-west1.firebasedatabase.app",
-    "project_id": "shareit-v1",
-    "storage_bucket": "shareit-v1.appspot.com"
+    "project_number": "",
+    "firebase_url": "",
+    "project_id": "",
+    "storage_bucket": "
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:197530779446:android:bce0f5c8a19c7fabd4fd97",
+        "mobilesdk_app_id": "",
         "android_client_info": {
-          "package_name": "com.example.flutter_application_1"
+          "package_name": ""
         }
       },
       "oauth_client": [
         {
-          "client_id": "197530779446-p104ov9hsf7n8lplgr582c0puadgii2e.apps.googleusercontent.com",
-          "client_type": 3
+          "client_id": "",
+          "client_type": 
         }
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyDU9RiA26JWQdSvi11hclVFjsgaOLB8AvE"
+          "current_key": ""
         }
       ],
       "services": {
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "197530779446-p104ov9hsf7n8lplgr582c0puadgii2e.apps.googleusercontent.com",
-              "client_type": 3
+              "client_id": "",
+              "client_type": 
             }
           ]
         }
       }
     }
   ],
-  "configuration_version": "1"
+  "configuration_version": ""
 }
